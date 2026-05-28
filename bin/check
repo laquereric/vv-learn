@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Pre-release check (PLAN_0_1_0 Phase E; bootstrapped in Phase A and
+# carried forward through the 0.x.x line). Single operator-run script
+# that verifies the gem is ready to bump VERSION and cut a tag.
+# Path-vendored under the substrate; no remote CI yet.
+#
+# Steps:
+#   1. Run `bundle install` (idempotent).
+#   2. Run `bundle exec rspec`.
+#
+# Unlike vv-decision's bin/check, vv-learn has no native-extension
+# dependency of its own — the SHACL pre-validation reaches vv-graph
+# only through `Vv::Memory::Scoped#shacl_validate` (PREREQ-A), and
+# the round-trip spec uses a fake facade. Operators wanting the
+# round-trip spec to exercise real SHACL should run vv-memory's
+# bin/check first to ensure the underlying engine is built.
+
+set -u
+
+cd "$(dirname "$0")/.." || exit 1
+
+red()   { printf '\033[31m%s\033[0m\n' "$1"; }
+green() { printf '\033[32m%s\033[0m\n' "$1"; }
+
+if ! command -v bundle >/dev/null 2>&1; then
+  red "✗ \`bundle\` not on PATH — install Bundler before running bin/check."
+  exit 1
+fi
+
+echo
+echo "Running bundle install ..."
+echo
+if ! bundle install --quiet; then
+  red "✗ bundle install failed"
+  exit 1
+fi
+
+echo
+echo "Running bundle exec rspec ..."
+echo
+if bundle exec rspec; then
+  echo
+  green "✓ rspec green"
+  exit 0
+else
+  echo
+  red "✗ rspec red — fix before tagging $(cat VERSION 2>/dev/null || echo 'next')"
+  exit 1
+fi
