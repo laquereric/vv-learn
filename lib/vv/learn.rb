@@ -44,6 +44,14 @@ require "vv/learn/reconciliation"
 # `RuntimeNotReady` until vv-agent's Task runtime lands.
 require "vv/learn/cr_reconciliation"
 
+# Compliance-remediation improvement loop — the generalization of
+# `CrReconciliation` from CR docs to ANY deterministic gate.
+# `ComplianceRemediation::Violation`, `ComplianceProgram` contract,
+# `validate_inputs!`, and the instruction builder are pure-Ruby
+# surfaces now. `.open(...)` dispatches through `Vv::Agent` (BYO-provider
+# façade) and raises `RuntimeNotReady` until vv-agent's Task runtime lands.
+require "vv/learn/compliance_remediation"
+
 # Rails-app context bootstraps the Engine + AR model. Phase C/D
 # surfaces (Run, Runtime, ModelDispatcher) load through the Engine.
 if defined?(::Rails::Engine)

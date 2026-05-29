@@ -15,6 +15,7 @@ require "vv/learn/program"
 require "vv/learn/refusals"
 require "vv/learn/reconciliation"
 require "vv/learn/cr_reconciliation"
+require "vv/learn/compliance_remediation"
 
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
