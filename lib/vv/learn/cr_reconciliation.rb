@@ -23,14 +23,18 @@ module Vv
     # `claude -p` directly; that script is the pre-runtime bootstrap.
     # This module is the canonical home.)
     #
-    # **Partial landing, mirroring `Vv::Learn::Reconciliation`.** The
-    # contract (`CrReconciliationProgram`), the typed `Target`, input
-    # validation, and the instruction builder are pure-Ruby surfaces
-    # that work today. `.open(...)` dispatches through `Vv::Agent`, but
-    # the live agent runtime (`Vv::Agent::Task.run!`, vv-agent Phase D)
-    # is not yet implemented — so `.open` raises `RuntimeNotReady` with
-    # a verbatim hint until the provider runtime lands. Same posture as
-    # `Reconciliation.open` waiting on `Vv::Learn.run!`.
+    # **Surfaces.** The contract (`CrReconciliationProgram`), the typed
+    # `Target`, input validation, and the instruction builder are
+    # pure-Ruby and work standalone. `.open(...)` dispatches through
+    # `Vv::Agent::Task.run!` (vv-agent Phase D — now landed). That entry
+    # **requires** `scope:` (the `Vv::Memory::Scoped` that records the
+    # `agent_task` / `agent_task_completed` Bronze pair) and `provider:`
+    # (a `Vv::Agent::Provider::*` class). Per the BYO doctrine, `.open`
+    # resolves the provider via `Vv::Agent.select` unless the caller
+    # passes one — LN never names a concrete model. If the vv-agent
+    # runtime is absent (older bundle), `.open` raises `RuntimeNotReady`
+    # with a verbatim hint and the MM `scripts/cr-reconcile-sweep.rb`
+    # bootstrap covers the interim.
     module CrReconciliation
       # A submodule to reconcile. `cr_glob` scopes which files the
       # agent may touch — the prohibition `:edit_outside_cr_files` is
@@ -116,28 +120,37 @@ module Vv
       # Non-halting: a failing target is collected, not fatal; returns
       # a results array `[{ target:, ok:, detail: }]`.
       #
-      # Guarded exactly like `Reconciliation.open`: until vv-agent's
-      # provider runtime (`Vv::Agent::Task.run!`, Phase D) lands, this
-      # raises `RuntimeNotReady` with a verbatim hint. The MM-side
-      # `scripts/cr-reconcile-sweep.rb` bootstrap covers the interim.
-      def open(targets:, plans:, agent: nil, mcp_servers: [], timeout: 600)
+      # `scope:` is required — it is the `Vv::Memory::Scoped` that
+      # `Vv::Agent::Task.run!` records the Bronze episode pair against.
+      # `provider:` may be passed explicitly; otherwise it is resolved
+      # BYO via `Vv::Agent.select(required:, prefer:)` so LN stays
+      # model-agnostic. If the vv-agent runtime is absent, raises
+      # `RuntimeNotReady` (the MM bootstrap covers that case).
+      def open(targets:, plans:, scope:, provider: nil,
+               required: {}, prefer: {}, agent: nil, mcp_servers: [], timeout: 600)
         validate_inputs!(targets: targets, plans: plans)
 
         unless defined?(::Vv::Agent::Task) && ::Vv::Agent::Task.respond_to?(:run!)
           raise ::Vv::Learn::Errors::RuntimeNotReady,
                 "Vv::Learn::CrReconciliation.open dispatches through " \
-                "Vv::Agent::Task.run! (vv-agent Phase D), which has not " \
-                "landed. Until it does, use the MM bootstrap driver " \
+                "Vv::Agent::Task.run!, which is not available in the " \
+                "bundled vv-agent. Bundle a vv-agent with the Task " \
+                "runtime (Phase D), or use the MM bootstrap driver " \
                 "scripts/cr-reconcile-sweep.rb (shells the agent CLI " \
-                "directly). Bundle a vv-agent with the Task runtime to " \
-                "enable provider-dispatched reconciliation."
+                "directly)."
         end
+
+        # BYO-provider: resolve through the registry unless the caller
+        # supplied a concrete provider class.
+        provider ||= ::Vv::Agent.select(required: required, prefer: prefer)
 
         targets.map do |target|
           begin
             result = ::Vv::Agent::Task.run!(
-              agent:         agent,
+              scope:         scope,
+              provider:      provider,
               instructions:  instructions_for(target: target, plans: plans),
+              agent:         agent,
               mcp_servers:   mcp_servers,
               timeout:       timeout,
               provenance_id: "#{PROVENANCE_PREFIX}:#{target.name}",
