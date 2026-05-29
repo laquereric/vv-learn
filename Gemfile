@@ -11,6 +11,8 @@ source "https://rubygems.org"
 gem "vv-memory",   path: "../vv-memory"
 gem "vv-decision", path: "../vv-decision"
 gem "vv-graph",    path: "../vv-graph"
+# CR-reconciliation dispatch (Vv::Learn::CrReconciliation → Vv::Agent::Task.run!).
+gem "vv-agent",    path: "../vv-agent"
 
 # Specify dependencies in vv-learn.gemspec.
 gemspec
