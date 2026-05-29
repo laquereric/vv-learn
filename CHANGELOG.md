@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- **CR-reconciliation improvement loop** (`Vv::Learn::CrReconciliation`).
+  Reconciling each vendor submodule's `CONSUMER_REQUIREMENT_*` files
+  against the substrate's plans is LLM-authored improvement work — it
+  moves here from the MM superproject's `scripts/cr-reconcile-sweep.rb`
+  bootstrap. Ships the `CrReconciliationProgram` contract (prohibits
+  editing outside CR files, code changes, MM-boundary commits, and
+  force-pushing over a newer remote), the typed `Target`, input
+  validation, and the instruction builder as pure-Ruby surfaces.
+  `.open(...)` dispatches one agent task per target **through vv-agent**
+  (`Vv::Agent::Task.run!`, BYO-provider) — never a hardwired model —
+  and raises `RuntimeNotReady` until that runtime lands, mirroring
+  `Reconciliation.open`. Gemspec gains `vv-agent >= 0.1.0`.
+
 ## 0.1.0 — (unreleased)
 
 First shippable release. Stands up the **autonomous,

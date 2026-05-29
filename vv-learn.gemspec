@@ -74,6 +74,14 @@ Gem::Specification.new do |spec|
   # Phase C until vv-decision 0.2.0 lands.
   spec.add_dependency "vv-decision",     ">= 0.1.0"
 
+  # Cr-reconciliation dispatch — every agent task vv-learn authors is
+  # dispatched through the vv-agent BYO-provider façade
+  # (`Vv::Agent::Task.run!`), never a hardwired model SDK. The live
+  # dispatch is guarded behind a `RuntimeNotReady` check until
+  # vv-agent's Task runtime (Phase D) lands; the contract + validation
+  # surfaces work without it.
+  spec.add_dependency "vv-agent",        ">= 0.1.0"
+
   # PLAN_0_1_0 §"v0.1.0 contract additions" — no-direct-vv-graph-
   # dependency layering rule. SHACL pre-validation reaches vv-graph
   # only through `Vv::Memory::Scoped#shacl_validate`. Direct
